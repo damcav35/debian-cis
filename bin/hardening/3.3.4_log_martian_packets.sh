@@ -6,7 +6,7 @@
 #
 
 #
-# 3.3.4 Ensure suspicious packets are logged (Scored)
+# 3.3.4 Ensure broadcast icmp requests are ignored (Automated)
 #
 
 set -e # One error, it's over

@@ -6,7 +6,7 @@
 #
 
 #
-# 3.3.5 Ensure broadcast ICMP requests are ignored (Scored)
+# 3.3.5 Ensure icmp redirects are not accepted (Automated)
 #
 
 set -e # One error, it's over

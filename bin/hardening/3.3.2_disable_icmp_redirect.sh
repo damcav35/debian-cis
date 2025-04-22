@@ -6,7 +6,7 @@
 #
 
 #
-# 3.3.2 Ensure ICMP redirects are not accepted (Scored)
+# 3.3.2 Ensure packet redirect sending is disabled (Automated)
 #
 
 set -e # One error, it's over

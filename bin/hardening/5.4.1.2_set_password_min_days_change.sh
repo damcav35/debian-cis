@@ -6,7 +6,7 @@
 #
 
 #
-# 5.4.1.2 Ensure minimum days between password changes is 7 or more (Scored)
+# 5.4.1.2 Ensure minimum password age is configured (Manual)
 #
 
 set -e # One error, it's over

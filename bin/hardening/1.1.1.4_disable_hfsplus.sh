@@ -6,7 +6,7 @@
 #
 
 #
-# 1.1.1.4 Ensure mounting of hfsplus filesystems is disabled (Scored)
+# 1.1.1.4 Ensure hfsplus kernel module is not available (Automated)
 #
 
 set -e # One error, it's over

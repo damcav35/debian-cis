@@ -6,7 +6,7 @@
 #
 
 #
-# 3.1.1 Disable IPv6 (Not Scored)
+# 3.1.1 Ensure IPv6 status is identified (Manual)
 #
 
 set -e # One error, it's over
