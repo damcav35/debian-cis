@@ -1,4 +1,4 @@
-#!/bin/bash
+git log#!/bin/bash
 
 # run-shellcheck
 #
