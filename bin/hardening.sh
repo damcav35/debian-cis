@@ -29,6 +29,8 @@ BATCH_MODE=''
 SUMMARY_JSON=''
 ASK_LOGLEVEL=''
 ALLOW_UNSUPPORTED_DISTRIBUTION=0
+# do we use scripts as named in "bin/hardening", or do we need a mapping to a specific version in "versions" folder
+SPECIFIC_VERSION=""
 
 usage() {
     cat <<EOF
@@ -105,6 +107,13 @@ OPTIONS:
         This option sets LOGLEVEL, you can choose : info, warning, error, ok, debug or silent.
         Default value is : info
 
+    --set-version <version>
+        This option allows to run the scripts as defined for a specific CIS debian release.
+        Supported releases are the folders listed in the "versions" folder
+        examples:
+          --set-version debian_11
+          --set-version ovh_legacy
+
     --summary-json
         While performing system audit, this option sets LOGLEVEL to silent and
         only output a json summary at the end
@@ -163,6 +172,10 @@ while [[ $# -gt 0 ]]; do
         ASK_LOGLEVEL=$2
         shift
         ;;
+    --set-version)
+        SPECIFIC_VERSION=$2
+        shift
+        ;;
     --only)
         TEST_LIST[${#TEST_LIST[@]}]="$2"
         shift
@@ -216,6 +229,25 @@ if [ "$ASK_LOGLEVEL" ]; then LOGLEVEL=$ASK_LOGLEVEL; fi
 [ -r "${CIS_LIB_DIR}"/utils.sh ] && . "${CIS_LIB_DIR}"/utils.sh
 # shellcheck source=../lib/constants.sh
 [ -r "${CIS_LIB_DIR}"/constants.sh ] && . "${CIS_LIB_DIR}"/constants.sh
+
+if [ ! -z "$SPECIFIC_VERSION" ] ; then
+    # should be set in /etc/default/cis-hardening
+    if [ -z "$CIS_VERSIONS_DIR" ] ; then
+        echo "CIS_VERSIONS_DIR is not set, check your /etc/default/cis-hardening"
+        exit 1
+    fi
+
+    does_file_exist "$CIS_VERSIONS_DIR/$SPECIFIC_VERSION"
+    if [ $FNRET -ne 0 ] ; then
+      echo "$SPECIFIC_VERSION is not a valid version"
+      echo "Please use '--set-version' with one of $(ls $CIS_VERSIONS_DIR --hide=readme* -m)"
+      exit 1
+    fi
+
+    # update path for the remaining of the script
+    # check scripts will load the correct path from /etc/default, based on their location
+    CIS_CHECKS_DIR="$CIS_VERSIONS_DIR/$SPECIFIC_VERSION/hardening"
+fi
 
 # If we're on a unsupported platform and there is no flag --allow-unsupported-distribution
 # print warning, otherwise quit

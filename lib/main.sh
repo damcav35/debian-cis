@@ -76,13 +76,12 @@ if ! [ -r "${CIS_CONF_DIR}"/conf.d/"$SCRIPT_NAME".cfg ]; then
     # If it doesn't exist, create it with default values
     echo "# Configuration for $SCRIPT_NAME, created from default values on $(date)" >"${CIS_CONF_DIR}"/conf.d/"$SCRIPT_NAME".cfg
     # If create_config is a defined function, execute it.
-    # Otherwise, just disable the test by default.
+    # Otherwise, just set the test as audit by default.
     if type -t create_config | grep -qw function; then
         create_config >>"${CIS_CONF_DIR}"/conf.d/"$SCRIPT_NAME".cfg
     else
         echo "status=audit" >>"${CIS_CONF_DIR}"/conf.d/"$SCRIPT_NAME".cfg
     fi
-
 fi
 
 if [ "$forcedstatus" = "createconfig" ]; then

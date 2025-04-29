@@ -39,6 +39,10 @@ usecase_name_root=""
 usecase_name_sudo=""
 declare -a REGISTERED_TESTS
 
+# do we use scripts as named in "tests/hardening", or do we need a mapping to a specific version in "versions" folder
+SPECIFIC_VERSION=""
+CIS_TESTS_DIR="$(dirname "$0")"/hardening
+
 #####################
 # Utility functions #
 #####################
@@ -154,6 +158,17 @@ fi
 # shellcheck source=../tests/lib.sh
 . "$(dirname "$0")"/lib.sh
 
+# Arguments parsing
+while getopts :v: opt; do
+  case ${opt} in
+    v)
+      SPECIFIC_VERSION="${OPTARG}";
+      shift;
+      shift;
+      ;;
+  esac
+done
+
 ###################
 # Execution start #
 ###################
@@ -161,9 +176,28 @@ printf "\033[1;36m###\n### %s\n### \033[0m\n" "Starting debian-cis functional te
 
 . /etc/default/cis-hardening
 
+if [ ! -z "$SPECIFIC_VERSION" ] ; then
+    # should be set in /etc/default/cis-hardening
+    if [ -z "$CIS_VERSIONS_DIR" ] ; then
+        echo "CIS_VERSIONS_DIR is not set, check your /etc/default/cis-hardening"
+        exit 1
+    fi
+
+    if [ ! -d  "$CIS_VERSIONS_DIR/$SPECIFIC_VERSION" ]; then
+      echo "$SPECIFIC_VERSION is not a valid version"
+      echo "Please use '--set-version' with one of $(ls $CIS_VERSIONS_DIR --hide=readme* -m)"
+      exit 1
+    fi
+
+    # update path for the remaining of the script
+    # check scripts will load the correct path from /etc/default, based on their location
+    CIS_CHECKS_DIR="$CIS_VERSIONS_DIR/$SPECIFIC_VERSION/hardening"
+    CIS_TESTS_DIR="$CIS_VERSIONS_DIR/$SPECIFIC_VERSION/tests"
+fi
+
 # if no scripts were passed as arguments, list all available test scenarii to be played
 if [ $# -eq 0 ]; then
-    tests_list=$(ls -v "$(dirname "$0")"/hardening/)
+    tests_list=$(ls -v "$CIS_TESTS_DIR")
     testcount=$(wc -l <<<"$tests_list")
 else
     tests_list="$*"
@@ -171,7 +205,7 @@ else
 fi
 
 for test_file in $tests_list; do
-    test_file_path=$(dirname "$0")/hardening/"$test_file"
+    test_file_path="$CIS_TESTS_DIR"/"$test_file"
     if [ ! -f "$test_file_path" ]; then
         fatal "Test file \"$test_file\" does not exist"
     fi

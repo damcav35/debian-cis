@@ -18,4 +18,4 @@ COPY cisharden.sudoers /etc/sudoers.d/secaudit
 RUN sed -i 's#cisharden#secaudit#' /etc/sudoers.d/secaudit
 
 
-ENTRYPOINT ["/opt/debian-cis/tests/launch_tests.sh"]
+ENTRYPOINT ["/opt/debian-cis/tests/launch_tests.sh -v debian_11"]

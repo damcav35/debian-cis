@@ -1,0 +1,2 @@
+This directory contains mapping between previous cis versions and the current scripts naming.
+If some script was present in a previous debian release, but absent from the current one, it should be here too.
