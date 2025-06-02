@@ -6,16 +6,16 @@
 #
 
 #
-# 5.2.21 Ensure SSH AllowTCPForwarding is disabled (Scored)
+# 99.5.2.4 Ensure SSH Protocol is set to 2 (Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=3
+HARDENING_LEVEL=2
 # shellcheck disable=2034
-DESCRIPTION="Disable SSH AllowTCPForwarding."
+DESCRIPTION="Set secure shell (SSH) protocol to 2."
 
 PACKAGE='openssh-server'
 OPTIONS=''
@@ -32,7 +32,7 @@ audit() {
             SSH_PARAM=$(echo "$SSH_OPTION" | cut -d= -f 1)
             SSH_VALUE=$(echo "$SSH_OPTION" | cut -d= -f 2)
             PATTERN="^${SSH_PARAM}[[:space:]]*$SSH_VALUE"
-            does_pattern_exist_in_file_nocase $FILE "$PATTERN"
+            does_pattern_exist_in_file_nocase "$FILE" "$PATTERN"
             if [ "$FNRET" = 0 ]; then
                 ok "$PATTERN is present in $FILE"
             else
@@ -67,7 +67,7 @@ apply() {
                 info "Parameter $SSH_PARAM is present but with the wrong value -- Fixing"
                 replace_in_file "$FILE" "^${SSH_PARAM}[[:space:]]*.*" "$SSH_PARAM $SSH_VALUE"
             fi
-            /etc/init.d/ssh reload
+            /etc/init.d/ssh reload >/dev/null 2>&1
         fi
     done
 }
@@ -77,13 +77,12 @@ check_config() {
     :
 }
 
-# This function will check config parameters required
 create_config() {
     cat <<EOF
+# shellcheck disable=2034
 status=audit
-# Value of AllowTCPForwarding
-# Settles sshd allowtcpforwarding
-OPTIONS='AllowTCPForwarding=no'
+# Put here your protocol for ssh
+OPTIONS='Protocol=2'
 EOF
 }
 

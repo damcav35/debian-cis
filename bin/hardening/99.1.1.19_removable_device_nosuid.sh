@@ -6,60 +6,56 @@
 #
 
 #
-# 1.4.2 Ensure filesysteme integrity is regularly checked (Scored)
+# 99.1.1.19 Ensure nosuid option set on removable media partitions (Not Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=4
+HARDENING_LEVEL=2
 # shellcheck disable=2034
-DESCRIPTION="Implemet periodic execution of file integrity."
+DESCRIPTION="nosuid option for removable media partitions."
 
-# Note : in CIS, AIDE has been chosen, however we chose tripwire
+# Fair warning, it only checks /media.* like partition in fstab, it's not exhaustive
 
-FILES="/etc/crontab"
-DIRECTORY="/etc/cron.d"
-PATTERN='tripwire --check'
+# Quick factoring as many script use the same logic
+PARTITION="/media\S*"
+OPTION="nosuid"
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    FILES="$FILES $($SUDO_CMD find $DIRECTORY -type f)"
-    FOUND=0
-    for FILE in $FILES; do
-        does_pattern_exist_in_file "$FILE" "$PATTERN"
-        if [ "$FNRET" = 0 ]; then
-            FOUND=1
-        fi
-    done
-    if [ $FOUND = 1 ]; then
-        ok "$PATTERN is present in $FILES"
+    info "Verifying if there is $PARTITION like partition"
+    FNRET=0
+    is_a_partition "$PARTITION"
+    if [ "$FNRET" -gt 0 ]; then
+        ok "There is no partition like $PARTITION"
+        FNRET=0
     else
-        crit "$PATTERN is not present in $FILES"
+        info "detected $PARTITION like"
+        has_mount_option "$PARTITION" "$OPTION"
+        if [ "$FNRET" -gt 0 ]; then
+            crit "$PARTITION has no option $OPTION in fstab!"
+            FNRET=1
+        else
+            ok "$PARTITION has $OPTION in fstab"
+        fi
     fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    FILES="$FILES $($SUDO_CMD find $DIRECTORY -type f)"
-    FOUND=0
-    for FILE in $FILES; do
-        does_pattern_exist_in_file "$FILE" "$PATTERN"
-        if [ "$FNRET" = 0 ]; then
-            FOUND=1
-        fi
-    done
-    if [ "$FOUND" != 1 ]; then
-        warn "$PATTERN is not present in $FILES, setting tripwire cron"
-        echo "0 10 * * * root /usr/sbin/tripwire --check > /dev/shm/tripwire_check 2>&1 " >/etc/cron.d/CIS_8.3.2_tripwire
-    else
-        ok "$PATTERN is present in $FILES"
+    if [ "$FNRET" = 0 ]; then
+        ok "$PARTITION is correctly set"
+    elif [ "$FNRET" = 1 ]; then
+        info "Adding $OPTION to fstab"
+        add_option_to_fstab "$PARTITION" "$OPTION"
     fi
 }
 
 # This function will check config parameters required
 check_config() {
+    # No param for this script
     :
 }
 

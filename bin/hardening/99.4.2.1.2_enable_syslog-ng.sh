@@ -6,7 +6,7 @@
 #
 
 #
-# 4.2.1.5 Ensure syslog-ng is configured to send logs to a remote log host (Scored)
+# 99.4.2.1.2 Ensure syslog-ng service is enabled (Scored)
 #
 
 set -e # One error, it's over
@@ -15,10 +15,10 @@ set -u # One variable unset, it's over
 # shellcheck disable=2034
 HARDENING_LEVEL=3
 # shellcheck disable=2034
-DESCRIPTION="Configure syslog-ng to send logs to a remote log host."
+DESCRIPTION="Ensure syslog-ng service is activated."
+
 PACKAGE='syslog-ng'
-SYSLOG_BASEDIR='/etc/syslog-ng'
-PATTERN='destination[[:alnum:][:space:]*_*{]+(tcp|network|udp)[[:space:]]*\([[:space:]]*\"?[[:alnum:]\-.]+\"?.'
+SERVICE_NAME="syslog-ng"
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
@@ -26,19 +26,12 @@ audit() {
     if [ "$FNRET" != 0 ]; then
         crit "$PACKAGE is not installed!"
     else
-        FOUND=0
-        FILES="$SYSLOG_BASEDIR/syslog-ng.conf $($SUDO_CMD find -L "$SYSLOG_BASEDIR"/conf.d/ -type f)"
-        for FILE in $FILES; do
-            does_pattern_exist_in_file_multiline "$FILE" "$PATTERN"
-            if [ "$FNRET" = 0 ]; then
-                FOUND=1
-            fi
-        done
-
-        if [ "$FOUND" = 1 ]; then
-            ok "$PATTERN is present in $FILES"
+        info "Checking if $SERVICE_NAME is enabled"
+        is_service_enabled "$SERVICE_NAME"
+        if [ "$FNRET" = 0 ]; then
+            ok "$SERVICE_NAME is enabled"
         else
-            crit "$PATTERN is not present in $FILES"
+            crit "$SERVICE_NAME is disabled"
         fi
     fi
 }
@@ -49,28 +42,16 @@ apply() {
     if [ "$FNRET" != 0 ]; then
         crit "$PACKAGE is not installed!"
     else
-        FOUND=0
-        FILES="$SYSLOG_BASEDIR/syslog-ng.conf $(find -L "$SYSLOG_BASEDIR"/conf.d/ -type f)"
-        for FILE in $FILES; do
-            does_pattern_exist_in_file_multiline "$FILE" "$PATTERN"
-            if [ "$FNRET" = 0 ]; then
-                FOUND=1
-            fi
-        done
-        if [ "$FOUND" = 1 ]; then
-            ok "$PATTERN is present in $FILES"
+        info "Checking if $SERVICE_NAME is enabled"
+        is_service_enabled "$SERVICE_NAME"
+        if [ "$FNRET" != 0 ]; then
+            info "Enabling $SERVICE_NAME"
+            update-rc.d "$SERVICE_NAME" remove >/dev/null 2>&1
+            update-rc.d "$SERVICE_NAME" defaults >/dev/null 2>&1
         else
-            crit "$PATTERN is not present in $FILES, please set a remote host to send your logs"
+            ok "$SERVICE_NAME is enabled"
         fi
     fi
-}
-
-# This function will create the config file for this check with default values
-create_config() {
-    cat <<EOF
-status=audit
-SYSLOG_BASEDIR='/etc/syslog-ng'
-EOF
 }
 
 # This function will check config parameters required

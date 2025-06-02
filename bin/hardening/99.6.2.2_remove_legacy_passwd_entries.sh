@@ -6,40 +6,43 @@
 #
 
 #
-# 1.4.1 Ensure tripwire is installed (Scored)
+# 99.6.2.2 Ensure no legacy "+" entries exist in /etc/passwd (Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=4
+HARDENING_LEVEL=1
 # shellcheck disable=2034
-DESCRIPTION="Ensure tripwire package is installed."
+DESCRIPTION="Verify no legacy + entries exist in /etc/password file."
 
-# Note : in CIS, AIDE has been chosen, however we chose tripwire
-
-PACKAGE='tripwire'
+FILE='/etc/passwd'
+RESULT=''
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    is_pkg_installed "$PACKAGE"
-    if [ "$FNRET" != 0 ]; then
-        crit "$PACKAGE is not installed!"
+    info "Checking if accounts have a legacy password entry"
+    if grep '^+:' "$FILE" -q; then
+        RESULT=$(grep '^+:' "$FILE")
+        crit "Some accounts have a legacy password entry"
+        crit "$RESULT"
     else
-        ok "$PACKAGE is installed"
+        ok "All accounts have a valid password entry format"
     fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    is_pkg_installed "$PACKAGE"
-    if [ "$FNRET" = 0 ]; then
-        ok "$PACKAGE is installed"
+    if grep '^+:' "$FILE" -q; then
+        RESULT=$(grep '^+:' "$FILE")
+        warn "Some accounts have a legacy password entry"
+        for LINE in $RESULT; do
+            info "Removing $LINE from $FILE"
+            delete_line_in_file "$FILE" "$LINE"
+        done
     else
-        crit "$PACKAGE is absent, installing it"
-        apt_install "$PACKAGE"
-        info "Tripwire is now installed but not fully functionnal, please see readme to go further"
+        ok "All accounts have a valid password entry format"
     fi
 }
 

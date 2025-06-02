@@ -6,7 +6,7 @@
 #
 
 #
-# 4.2.1.6 Ensure remote syslog-ng messages are only accepted on designated log hosts. (Not Scored)
+# 99.4.2.1.6 Ensure remote syslog-ng messages are only accepted on designated log hosts. (Not Scored)
 #
 
 set -e # One error, it's over

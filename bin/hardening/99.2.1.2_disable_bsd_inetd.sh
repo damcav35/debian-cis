@@ -6,7 +6,7 @@
 #
 
 #
-# 4.2.1.2 Ensure syslog-ng service is enabled (Scored)
+# 99.2.1.2 Ensure bsd-inetd is not enabled (Scored)
 #
 
 set -e # One error, it's over
@@ -15,43 +15,34 @@ set -u # One variable unset, it's over
 # shellcheck disable=2034
 HARDENING_LEVEL=3
 # shellcheck disable=2034
-DESCRIPTION="Ensure syslog-ng service is activated."
+DESCRIPTION="Ensure bsd-inetd is not enabled."
 
-PACKAGE='syslog-ng'
-SERVICE_NAME="syslog-ng"
+PACKAGES='openbsd-inetd inetutils-inetd'
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    is_pkg_installed "$PACKAGE"
-    if [ "$FNRET" != 0 ]; then
-        crit "$PACKAGE is not installed!"
-    else
-        info "Checking if $SERVICE_NAME is enabled"
-        is_service_enabled "$SERVICE_NAME"
+    for PACKAGE in $PACKAGES; do
+        is_pkg_installed "$PACKAGE"
         if [ "$FNRET" = 0 ]; then
-            ok "$SERVICE_NAME is enabled"
+            crit "$PACKAGE is installed"
         else
-            crit "$SERVICE_NAME is disabled"
+            ok "$PACKAGE is absent"
         fi
-    fi
+    done
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    is_pkg_installed "$PACKAGE"
-    if [ "$FNRET" != 0 ]; then
-        crit "$PACKAGE is not installed!"
-    else
-        info "Checking if $SERVICE_NAME is enabled"
-        is_service_enabled "$SERVICE_NAME"
-        if [ "$FNRET" != 0 ]; then
-            info "Enabling $SERVICE_NAME"
-            update-rc.d "$SERVICE_NAME" remove >/dev/null 2>&1
-            update-rc.d "$SERVICE_NAME" defaults >/dev/null 2>&1
+    for PACKAGE in $PACKAGES; do
+        is_pkg_installed "$PACKAGE"
+        if [ "$FNRET" = 0 ]; then
+            warn "$PACKAGE is installed, purging"
+            apt-get purge "$PACKAGE" -y
+            apt-get autoremove
         else
-            ok "$SERVICE_NAME is enabled"
+            ok "$PACKAGE is absent"
         fi
-    fi
+    done
 }
 
 # This function will check config parameters required

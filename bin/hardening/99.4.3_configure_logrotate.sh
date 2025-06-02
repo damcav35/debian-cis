@@ -6,41 +6,30 @@
 #
 
 #
-# 1.6.3.1 Ensure apport is disabled (Scored)
+# 99.4.3 Ensure logrotate is configured (Not Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=2
+HARDENING_LEVEL=3
 # shellcheck disable=2034
-DESCRIPTION="Disable apport to avoid confidential data leaks."
+DESCRIPTION="Configure logrotate to prevent logfile from growing unmanageable."
 
-PACKAGE='apport'
+# shellcheck disable=2034
+SERVICE_NAME="syslog-ng"
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    is_pkg_installed "$PACKAGE"
-    if [ "$FNRET" = 0 ]; then
-        crit "$PACKAGE is installed!"
-    else
-        ok "$PACKAGE is absent"
-    fi
-    :
+    info "Ensure logs are properly rotated (especially syslog-ng)"
+    info "No measure here, please review the files by yourself"
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    is_pkg_installed "$PACKAGE"
-    if [ "$FNRET" = 0 ]; then
-        crit "$PACKAGE is installed, purging it"
-        apt-get purge "$PACKAGE" -y
-        apt-get autoremove
-    else
-        ok "$PACKAGE is absent"
-    fi
-    :
+    info "Ensure logs are properly rotated (especially syslog-ng)"
+    info "No measure here, please review the file by yourself"
 }
 
 # This function will check config parameters required

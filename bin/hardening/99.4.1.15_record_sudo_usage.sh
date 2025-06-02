@@ -6,7 +6,7 @@
 #
 
 #
-# 4.1.15 Ensure system administrator actions (sudolog) are collected (Scored)
+# 99.4.1.15 Ensure system administrator actions (sudolog) are collected (Scored)
 #
 
 set -e # One error, it's over

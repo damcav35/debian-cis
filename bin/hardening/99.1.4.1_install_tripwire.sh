@@ -6,46 +6,41 @@
 #
 
 #
-# 2.2.10 Ensure HTTP Server is not enabled (Scored)
+# 99.1.4.1 Ensure tripwire is installed (Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=3
+HARDENING_LEVEL=4
 # shellcheck disable=2034
-DESCRIPTION="Ensure HTTP server is not enabled."
-# shellcheck disable=2034
-HARDENING_EXCEPTION=http
+DESCRIPTION="Ensure tripwire package is installed."
 
-# Based on aptitude search '~Phttpd'
-PACKAGES='nginx apache2 lighttpd micro-httpd mini-httpd yaws boa bozohttpd'
+# Note : in CIS, AIDE has been chosen, however we chose tripwire
+
+PACKAGE='tripwire'
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    for PACKAGE in $PACKAGES; do
-        is_pkg_installed "$PACKAGE"
-        if [ "$FNRET" = 0 ]; then
-            crit "$PACKAGE is installed!"
-        else
-            ok "$PACKAGE is absent"
-        fi
-    done
+    is_pkg_installed "$PACKAGE"
+    if [ "$FNRET" != 0 ]; then
+        crit "$PACKAGE is not installed!"
+    else
+        ok "$PACKAGE is installed"
+    fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    for PACKAGE in $PACKAGES; do
-        is_pkg_installed "$PACKAGE"
-        if [ "$FNRET" = 0 ]; then
-            crit "$PACKAGE is installed, purging it"
-            apt-get purge "$PACKAGE" -y
-            apt-get autoremove -y
-        else
-            ok "$PACKAGE is absent"
-        fi
-    done
+    is_pkg_installed "$PACKAGE"
+    if [ "$FNRET" = 0 ]; then
+        ok "$PACKAGE is installed"
+    else
+        crit "$PACKAGE is absent, installing it"
+        apt_install "$PACKAGE"
+        info "Tripwire is now installed but not fully functionnal, please see readme to go further"
+    fi
 }
 
 # This function will check config parameters required

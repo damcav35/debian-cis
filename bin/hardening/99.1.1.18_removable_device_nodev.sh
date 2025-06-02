@@ -6,34 +6,56 @@
 #
 
 #
-# 4.3 Ensure logrotate is configured (Not Scored)
+# 99.1.1.18 Ensure nodev option set on removable media partition (Not Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=3
+HARDENING_LEVEL=2
 # shellcheck disable=2034
-DESCRIPTION="Configure logrotate to prevent logfile from growing unmanageable."
+DESCRIPTION="nodev option for removable media partitions."
 
-# shellcheck disable=2034
-SERVICE_NAME="syslog-ng"
+# Fair warning, it only checks /media.* like partition in fstab, it's not exhaustive
+
+# Quick factoring as many script use the same logic
+PARTITION="/media\S*"
+OPTION="nodev"
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    info "Ensure logs are properly rotated (especially syslog-ng)"
-    info "No measure here, please review the files by yourself"
+    info "Verifying if there is $PARTITION like partition"
+    FNRET=0
+    is_a_partition "$PARTITION"
+    if [ "$FNRET" -gt 0 ]; then
+        ok "There is no partition like $PARTITION"
+        FNRET=0
+    else
+        info "detected $PARTITION like"
+        has_mount_option "$PARTITION" "$OPTION"
+        if [ "$FNRET" -gt 0 ]; then
+            crit "$PARTITION has no option $OPTION in fstab!"
+            FNRET=1
+        else
+            ok "$PARTITION has $OPTION in fstab"
+        fi
+    fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    info "Ensure logs are properly rotated (especially syslog-ng)"
-    info "No measure here, please review the file by yourself"
+    if [ "$FNRET" = 0 ]; then
+        ok "$PARTITION is correctly set"
+    elif [ "$FNRET" = 1 ]; then
+        info "Adding $OPTION to fstab"
+        add_option_to_fstab "$PARTITION" "$OPTION"
+    fi
 }
 
 # This function will check config parameters required
 check_config() {
+    # No param for this script
     :
 }
 

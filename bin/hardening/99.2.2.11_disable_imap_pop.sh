@@ -6,44 +6,46 @@
 #
 
 #
-# 6.2.4 Ensure no legacy "+" entries exist in /etc/shadow (Scored)
+# 99.2.2.11 Ensure IMAP and POP server is not installed (Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=1
+HARDENING_LEVEL=3
 # shellcheck disable=2034
-DESCRIPTION="Verify no legacy + entries exist in /etc/shadow file."
+DESCRIPTION="Ensure IMAP and POP servers are not installed"
+# shellcheck disable=2034
+HARDENING_EXCEPTION=mail
 
-FILE='/etc/shadow'
-RESULT=''
+# Based on aptitude search '~Pimap-server' and  aptitude search '~Ppop3-server'
+PACKAGES='citadel-server courier-imap cyrus-imapd-2.4 dovecot-imapd mailutils-imap4d courier-pop cyrus-pop3d-2.4 dovecot-pop3d heimdal-servers mailutils-pop3d popa3d solid-pop3d xmail'
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    info "Checking if accounts have a legacy password entry"
-    if $SUDO_CMD grep '^+:' "$FILE" -q; then
-        RESULT=$($SUDO_CMD grep '^+:' "$FILE")
-        crit "Some accounts have a legacy password entry"
-        crit "$RESULT"
-    else
-        ok "All accounts have a valid password entry format"
-    fi
+    for PACKAGE in $PACKAGES; do
+        is_pkg_installed "$PACKAGE"
+        if [ "$FNRET" = 0 ]; then
+            crit "$PACKAGE is installed!"
+        else
+            ok "$PACKAGE is absent"
+        fi
+    done
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    if grep '^+:' "$FILE" -q; then
-        RESULT=$(grep '^+:' "$FILE")
-        warn "Some accounts have a legacy password entry"
-        for LINE in $RESULT; do
-            info "Removing $LINE from $FILE"
-            delete_line_in_file "$FILE" "$LINE"
-        done
-    else
-        ok "All accounts have a valid password entry format"
-    fi
+    for PACKAGE in $PACKAGES; do
+        is_pkg_installed "$PACKAGE"
+        if [ "$FNRET" = 0 ]; then
+            crit "$PACKAGE is installed, purging it"
+            apt-get purge "$PACKAGE" -y
+            apt-get autoremove -y
+        else
+            ok "$PACKAGE is absent"
+        fi
+    done
 }
 
 # This function will check config parameters required

@@ -6,47 +6,56 @@
 #
 
 #
-# 2.1.2 Ensure bsd-inetd is not enabled (Scored)
+# 99.1.1.20 Ensure noexec option set on removable media partition (Not Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=3
+HARDENING_LEVEL=2
 # shellcheck disable=2034
-DESCRIPTION="Ensure bsd-inetd is not enabled."
+DESCRIPTION="noexec option for removable media partitions."
 
-PACKAGES='openbsd-inetd inetutils-inetd'
+# Fair warning, it only checks /media.* like partition in fstab, it's not exhaustive
+
+# Quick factoring as many script use the same logic
+PARTITION="/media\S*"
+OPTION="noexec"
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    for PACKAGE in $PACKAGES; do
-        is_pkg_installed "$PACKAGE"
-        if [ "$FNRET" = 0 ]; then
-            crit "$PACKAGE is installed"
+    info "Verifying if there is $PARTITION like partition"
+    FNRET=0
+    is_a_partition "$PARTITION"
+    if [ "$FNRET" -gt 0 ]; then
+        ok "There is no partition like $PARTITION"
+        FNRET=0
+    else
+        info "detected $PARTITION like"
+        has_mount_option "$PARTITION" "$OPTION"
+        if [ "$FNRET" -gt 0 ]; then
+            crit "$PARTITION has no option $OPTION in fstab!"
+            FNRET=1
         else
-            ok "$PACKAGE is absent"
+            ok "$PARTITION has $OPTION in fstab"
         fi
-    done
+    fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    for PACKAGE in $PACKAGES; do
-        is_pkg_installed "$PACKAGE"
-        if [ "$FNRET" = 0 ]; then
-            warn "$PACKAGE is installed, purging"
-            apt-get purge "$PACKAGE" -y
-            apt-get autoremove
-        else
-            ok "$PACKAGE is absent"
-        fi
-    done
+    if [ "$FNRET" = 0 ]; then
+        ok "$PARTITION is correctly set"
+    elif [ "$FNRET" = 1 ]; then
+        info "Adding $OPTION to fstab"
+        add_option_to_fstab "$PARTITION" "$OPTION"
+    fi
 }
 
 # This function will check config parameters required
 check_config() {
+    # No param for this script
     :
 }
 

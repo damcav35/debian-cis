@@ -6,7 +6,7 @@
 #
 
 #
-# 4.4 Ensure logrotate assigns approriate permissions (Scored)
+# 99.4.2.1.1 Ensure syslog-ng is installed (Scored)
 #
 
 set -e # One error, it's over
@@ -15,46 +15,29 @@ set -u # One variable unset, it's over
 # shellcheck disable=2034
 HARDENING_LEVEL=3
 # shellcheck disable=2034
-DESCRIPTION="Configure logrotate to assign appropriate permissions."
+DESCRIPTION="Install syslog-ng to manage logs"
 
-FILE="/etc/logrotate.conf"
-PATTERN="^\s*create\s+\S+"
-PERMISSIONS=0640
+# Note: in CIS, rsyslog has been chosen, however we chose syslog-ng
+PACKAGE='syslog-ng'
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    does_pattern_exist_in_file "$FILE" "$PATTERN"
+    is_pkg_installed "$PACKAGE"
     if [ "$FNRET" != 0 ]; then
-        crit "Logrotate permissions are not configured"
+        crit "$PACKAGE is not installed!"
     else
-        if grep -E "$PATTERN" "$FILE" | grep -E -v "\s(0)?[0-6][04]0\s"; then
-            crit "Logrotate permissions are not set to $PERMISSIONS"
-        else
-            ok "Logrotate permissions are well configured"
-        fi
+        ok "$PACKAGE is installed"
     fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    does_pattern_exist_in_file "$FILE" "$PATTERN"
-    if [ "$FNRET" != 0 ]; then
-        warn "Logrotate permissions are not configured, fixing it"
-        add_end_of_file "$FILE" "create $PERMISSIONS root utmp"
+    is_pkg_installed "$PACKAGE"
+    if [ "$FNRET" = 0 ]; then
+        ok "$PACKAGE is installed"
     else
-        RESULT=$(grep -E "$PATTERN" "$FILE" | grep -E -v "\s(0)?[0-6][04]0\s")
-        if [[ -n "$RESULT" ]]; then
-            warn "Logrotate permissions are not set to $PERMISSIONS, fixing it"
-            d_IFS=$IFS
-            c_IFS=$'\n'
-            IFS=$c_IFS
-            for SOURCE in $RESULT; do
-                replace_in_file "$FILE" "$SOURCE" "create $PERMISSIONS root utmp"
-            done
-            IFS=$d_IFS
-        else
-            ok "Logrotate permissions are well configured"
-        fi
+        crit "$PACKAGE is absent, installing it"
+        apt_install "$PACKAGE"
     fi
 }
 

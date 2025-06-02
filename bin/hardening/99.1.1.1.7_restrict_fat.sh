@@ -6,56 +6,45 @@
 #
 
 #
-# 1.1.18 Ensure nodev option set on removable media partition (Not Scored)
+# 99.1.1.1.7 Ensure mounting of FAT filesystems is limited (Not Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=2
+HARDENING_LEVEL=5
 # shellcheck disable=2034
-DESCRIPTION="nodev option for removable media partitions."
+DESCRIPTION="Limit mounting of FAT filesystems."
 
-# Fair warning, it only checks /media.* like partition in fstab, it's not exhaustive
+# Note: we check /proc/config.gz to be compliant with both monolithic and modular kernels
 
-# Quick factoring as many script use the same logic
-PARTITION="/media\S*"
-OPTION="nodev"
+KERNEL_OPTION="CONFIG_VFAT_FS"
+MODULE_FILE="vfat"
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    info "Verifying if there is $PARTITION like partition"
-    FNRET=0
-    is_a_partition "$PARTITION"
-    if [ "$FNRET" -gt 0 ]; then
-        ok "There is no partition like $PARTITION"
-        FNRET=0
+    # TODO check if uefi enabled if yes check if only boot partition use FAT
+    is_kernel_option_enabled "$KERNEL_OPTION" "$MODULE_FILE"
+    if [ "$FNRET" = 0 ]; then # 0 means true in bash, so it IS activated
+        crit "$KERNEL_OPTION is enabled!"
     else
-        info "detected $PARTITION like"
-        has_mount_option "$PARTITION" "$OPTION"
-        if [ "$FNRET" -gt 0 ]; then
-            crit "$PARTITION has no option $OPTION in fstab!"
-            FNRET=1
-        else
-            ok "$PARTITION has $OPTION in fstab"
-        fi
+        ok "$KERNEL_OPTION is disabled"
     fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    if [ "$FNRET" = 0 ]; then
-        ok "$PARTITION is correctly set"
-    elif [ "$FNRET" = 1 ]; then
-        info "Adding $OPTION to fstab"
-        add_option_to_fstab "$PARTITION" "$OPTION"
+    is_kernel_option_enabled "$KERNEL_OPTION"
+    if [ "$FNRET" = 0 ]; then # 0 means true in bash, so it IS activated
+        warn "I cannot fix $KERNEL_OPTION enabled, recompile your kernel please"
+    else
+        ok "$KERNEL_OPTION is disabled, nothing to do"
     fi
 }
 
 # This function will check config parameters required
 check_config() {
-    # No param for this script
     :
 }
 

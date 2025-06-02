@@ -6,7 +6,7 @@
 #
 
 #
-# 4.2.1.3 Configure /etc/syslog-ng/syslog-ng.conf (Not Scored)
+# 99.2.2.10 Ensure HTTP Server is not enabled (Scored)
 #
 
 set -e # One error, it's over
@@ -15,21 +15,37 @@ set -u # One variable unset, it's over
 # shellcheck disable=2034
 HARDENING_LEVEL=3
 # shellcheck disable=2034
-DESCRIPTION="Configure /etc/syslog-ng/syslog-ng.conf ."
-
+DESCRIPTION="Ensure HTTP server is not enabled."
 # shellcheck disable=2034
-SERVICE_NAME="syslog-ng"
+HARDENING_EXCEPTION=http
+
+# Based on aptitude search '~Phttpd'
+PACKAGES='nginx apache2 lighttpd micro-httpd mini-httpd yaws boa bozohttpd'
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    info "Ensure default and local facilities are preserved on the system"
-    info "No measure here, please review the file by yourself"
+    for PACKAGE in $PACKAGES; do
+        is_pkg_installed "$PACKAGE"
+        if [ "$FNRET" = 0 ]; then
+            crit "$PACKAGE is installed!"
+        else
+            ok "$PACKAGE is absent"
+        fi
+    done
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    info "Ensure default and local facilities are preserved on the system"
-    info "No measure here, please review the file by yourself"
+    for PACKAGE in $PACKAGES; do
+        is_pkg_installed "$PACKAGE"
+        if [ "$FNRET" = 0 ]; then
+            crit "$PACKAGE is installed, purging it"
+            apt-get purge "$PACKAGE" -y
+            apt-get autoremove -y
+        else
+            ok "$PACKAGE is absent"
+        fi
+    done
 }
 
 # This function will check config parameters required

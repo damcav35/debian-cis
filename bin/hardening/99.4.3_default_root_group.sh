@@ -6,40 +6,36 @@
 #
 
 #
-# 1.1.1.7 Ensure mounting of FAT filesystems is limited (Not Scored)
+# 99.5.4.3 Ensure default group for the root account is GID 0 (Scored)
 #
 
 set -e # One error, it's over
 set -u # One variable unset, it's over
 
 # shellcheck disable=2034
-HARDENING_LEVEL=5
+HARDENING_LEVEL=2
 # shellcheck disable=2034
-DESCRIPTION="Limit mounting of FAT filesystems."
+DESCRIPTION="Set default group for root account to 0."
 
-# Note: we check /proc/config.gz to be compliant with both monolithic and modular kernels
-
-KERNEL_OPTION="CONFIG_VFAT_FS"
-MODULE_FILE="vfat"
+USER='root'
+EXPECTED_GID='0'
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
-    # TODO check if uefi enabled if yes check if only boot partition use FAT
-    is_kernel_option_enabled "$KERNEL_OPTION" "$MODULE_FILE"
-    if [ "$FNRET" = 0 ]; then # 0 means true in bash, so it IS activated
-        crit "$KERNEL_OPTION is enabled!"
+    if [ "$(grep "^root:" /etc/passwd | cut -f4 -d:)" = 0 ]; then
+        ok "Root group has GID $EXPECTED_GID"
     else
-        ok "$KERNEL_OPTION is disabled"
+        crit "Root group GID should be $EXPECTED_GID"
     fi
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
-    is_kernel_option_enabled "$KERNEL_OPTION"
-    if [ "$FNRET" = 0 ]; then # 0 means true in bash, so it IS activated
-        warn "I cannot fix $KERNEL_OPTION enabled, recompile your kernel please"
+    if [ "$(grep "^root:" /etc/passwd | cut -f4 -d:)" = 0 ]; then
+        ok "Root group GID is $EXPECTED_GID"
     else
-        ok "$KERNEL_OPTION is disabled, nothing to do"
+        warn "Root group GID is not $EXPECTED_GID -- Fixing"
+        usermod -g "$EXPECTED_GID" "$USER"
     fi
 }
 
