@@ -6,7 +6,7 @@
 #
 
 #
-# 6.2.13 Ensure users' .netrc Files are not group or world accessible (Scored)
+# 7.2.10 Ensure local interactive user dot files access is configured (Automated)
 #
 
 set -e # One error, it's over
@@ -15,47 +15,74 @@ set -u # One variable unset, it's over
 # shellcheck disable=2034
 HARDENING_LEVEL=2
 # shellcheck disable=2034
-DESCRIPTION="Ensure users' .netrc Files are not group or world accessible"
+DESCRIPTION="Check user dot file access."
 
-PERMISSIONS="600"
+UNWANTED_FILES=".forward .netrc .rhost"
+
 ERRORS=0
+
+check_perms() {
+    local file=$1
+
+
+}
 
 # This function will be called if the script status is on enabled / audit mode
 audit() {
     for DIR in $(get_db passwd | grep -Ev '(root|halt|sync|shutdown)' | awk -F: '($7 != "/usr/sbin/nologin" && $7 != "/bin/false" && $7 !="/nonexistent" ) { print $6 }'); do
         debug "Working on $DIR"
-        for FILE in $DIR/.netrc; do
+        for FILE in "$DIR"/.[A-Za-z0-9]*; do
             if [ ! -h "$FILE" ] && [ -f "$FILE" ]; then
-                has_file_correct_permissions "$FILE" "$PERMISSIONS"
-                if [ "$FNRET" = 0 ]; then
-                    ok "$FILE has correct permissions"
-                else
-                    crit "$FILE permissions were not set to $PERMISSIONS"
+
+                # check permission on dot files
+                FILEPERM=$(stat -c "%A" "$FILE")
+                if [ "$(echo "$FILEPERM" | cut -c6)" != "-" ]; then
+                    crit "Group Write permission set on FILE $FILE"
                     ERRORS=$((ERRORS + 1))
                 fi
+                if [ "$(echo "$FILEPERM" | cut -c9)" != "-" ]; then
+                    crit "Other Write permission set on FILE $FILE"
+                    ERRORS=$((ERRORS + 1))
+                fi
+
+                # check files that should not be present
+                if echo "$UNWANTED_FILES" | grep -q "$FILE"; then
+                    crit "$FILE present"
+                fi
+
+                # check user owns file
+
+                # check are group owned by the user's primary group
+
             fi
         done
     done
 
     if [ "$ERRORS" = 0 ]; then
-        ok "permission $PERMISSIONS set on .netrc users files"
+        ok "Dot file permission in users directories are correct"
     fi
-
 }
 
 # This function will be called if the script status is on enabled mode
 apply() {
     for DIR in $(get_db passwd | grep -Ev '(root|halt|sync|shutdown)' | awk -F: '($7 != "/usr/sbin/nologin" && $7 != "/bin/false" && $7 !="/nonexistent" ) { print $6 }'); do
-        debug "Working on $DIR"
-        for FILE in $DIR/.netrc; do
+        for FILE in "$DIR"/.[A-Za-z0-9]*; do
             if [ ! -h "$FILE" ] && [ -f "$FILE" ]; then
-                has_file_correct_permissions "$FILE" "$PERMISSIONS"
-                if [ "$FNRET" = 0 ]; then
-                    ok "$FILE has correct permissions"
-                else
-                    warn "$FILE permissions were not set to $PERMISSIONS"
-                    chmod 600 "$FILE"
+
+                FILEPERM=$(stat -c "%A" "$FILE")
+                if [ "$(echo "$FILEPERM" | cut -c6)" != "-" ]; then
+                    warn "Group Write permission set on FILE $FILE"
+                    chmod g-w "$FILE"
                 fi
+                if [ "$(echo "$FILEPERM" | cut -c9)" != "-" ]; then
+                    warn "Other Write permission set on FILE $FILE"
+                    chmod o-w "$FILE"
+                fi
+
+                if echo "$UNWANTED_FILES" | grep -q "$FILE"; then
+                    info "$FILE found, please check with the user why he has this file"
+                fi
+
             fi
         done
     done
