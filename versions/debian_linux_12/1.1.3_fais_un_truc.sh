@@ -1,0 +1,1 @@
+../../bin/hardening/new_deb12_script.sh
