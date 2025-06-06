@@ -598,3 +598,14 @@ get_distribution() {
 is_running_in_container() {
     awk -F/ '$2 == "'"$1"'"' /proc/self/cgroup
 }
+
+is_a_link(){
+  local to_check="$1"
+
+  check_type=$(stat -c %F "$to_check" 2>/dev/null)
+  if [[ $check_type =~ "link" ]] ; then
+      FNRET=1
+  else
+      FNRET=0
+  fi
+}
